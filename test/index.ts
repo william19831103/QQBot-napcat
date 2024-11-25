@@ -72,19 +72,12 @@ async function ocrImage(imageUrl: string): Promise<string> {
     // 使用 OCRManager 进行识别
     const result = await ocrManager.recognize(buffer)
     
-    if (!result.success) {
-      throw new Error(result.error || 'OCR识别失败')
-    }
-    
-    if (!result.text) {
-      throw new Error('OCR识别结果为空')
-    }
-    
-    return result.text
+    // 直接返回文本（可能为空）
+    return result.text || ''
     
   } catch (error) {
     console.error('OCR处理失败:', error)
-    throw error
+    return '' // 出错时返回空字符串
   }
 }
 
@@ -205,7 +198,7 @@ async function main() {
           message: [{ 
             type: 'text', 
             data: { 
-              text: `您今天已经领取过卡密了：${userKey}。每日一次，请明天再来！每日午夜12点刷新！` 
+              text: `您今天已经领取过卡密��：${userKey}。每日一次，请明天再来！每日午夜12点刷新！` 
             }
           }]
         })

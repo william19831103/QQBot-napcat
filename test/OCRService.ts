@@ -184,35 +184,78 @@ class YDOCRProvider implements OCRProvider {
   }
 
   async recognize(imageData: Buffer): Promise<OCRResponse> {
-    const bodyMd5 = this.md5(imageData)
-    const signature = this.md5Str(this.md5Str(bodyMd5 + this.userId + this.userKey))
-
-    const params = new URLSearchParams({
-      userID: this.userId,
-      signature,
-      signatureMethod: 'md5',
-      bodyMD5: bodyMd5,
-      version: 'v2',
-      action: 'page',
-      language: 'ch',
-      rotate: '0'
-    })
-
     try {
-      const response = await fetch(`${this.url}?${params}`, {
-        method: 'POST',
-        body: imageData,
-        timeout: 15000
+      const bodyMD5 = this.md5(imageData)
+      const signature = this.md5Str(this.md5Str(bodyMD5 + this.userId + this.userKey))
+
+      const params = new URLSearchParams({
+        userID: this.userId,
+        signature: signature,
+        signatureMethod: 'md5',
+        bodyMD5: bodyMD5,
+        version: 'v2',
+        action: 'page',
+        language: 'ch',
+        rotate: '0'
       })
 
-      const result = await response.json()
+      console.log('YDOCR请求参数:', {
+        url: this.url,
+        params: params.toString(),
+        bodyMD5,
+        signature
+      })
 
-      if (result.code === 0) {
-        return { success: true, text: result.data?.text || '' }
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000)
+
+      const response = await fetch(`${this.url}?${params.toString()}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream'
+        },
+        body: imageData,
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      console.log('YDOCR响应状态:', response.status, response.statusText)
+
+      const result = await response.json() as {
+        success?: boolean
+        data?: Array<{
+          text: string
+          confidence: number
+          polygon?: any
+        }>
+        message?: string
       }
-      return { success: false, error: result.message || 'Unknown error' }
-    } catch (error) {
-      return { success: false, error: `YDOCR服务错误: ${error.message}` }
+
+      console.log('YDOCR响应内容:', result)
+
+      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        const text = result.data.map(item => item.text).join('\n')
+        console.log('YDOCR识别成功，文本内容:', text)
+        return { success: true, text }
+      }
+
+      console.log('YDOCR识别失败，错误信息:', result.message)
+      return { 
+        success: false, 
+        error: result.message || 'YDOCR识别失败' 
+      }
+
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.error('YDOCR请求超时')
+        return { success: false, error: 'YDOCR服务超时' }
+      }
+      console.error('YDOCR服务错误:', error)
+      return { 
+        success: false, 
+        error: `YDOCR服务错误: ${error.message}` 
+      }
     }
   }
 
@@ -225,15 +268,21 @@ class YDOCRProvider implements OCRProvider {
         signatureMethod: 'secretKey'
       }
 
+      console.log('检查YDOCR余额:', data)
+
       const response = await fetch(balanceUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
         body: JSON.stringify(data)
       })
 
-      const result = await response.json()
+      const result = await response.json() as { code: number }
+      console.log('YDOCR余额检查结果:', result)
       return result.code === 0
-    } catch {
+    } catch (error) {
+      console.error('YDOCR余额检查失败:', error)
       return false
     }
   }
@@ -242,10 +291,11 @@ class YDOCRProvider implements OCRProvider {
 // OCR管理器
 export class OCRManager {
   private ocrSpaceKeys = ['K87108387888957', 'K89499185488957', 'K82081561288957']
-  private currentOcrSpaceIndex = 0
+  private currentKeyIndex = 0  // 当前使用的key索引
   private baiduProvider: BaiduOCRProvider
   private ydProvider: YDOCRProvider
 
+  
   constructor() {
     this.baiduProvider = new BaiduOCRProvider(
       '116369516',
@@ -258,26 +308,37 @@ export class OCRManager {
     )
   }
 
+  // 获取下一个key的索引
+  private getNextKeyIndex(): number {
+    return (this.currentKeyIndex + 1) % this.ocrSpaceKeys.length
+  }
+
   async recognize(imageData: Buffer): Promise<OCRResponse> {
     const errors: string[] = []
 
-    // 尝试OCR.space
-    for (const key of this.ocrSpaceKeys) {
-      try {
-        console.log(`尝试使用OCR.space (key: ${key})...`)
-        const provider = new OCRSpaceProvider(key)
-        const result = await provider.recognize(imageData)
-        if (result.success) {
-          console.log('OCR.space识别成功')
-          return result
-        }
-        errors.push(`OCR.space: ${result.error}`)
-      } catch (error) {
-        errors.push(`OCR.space异常: ${error.message}`)
+    // 尝试当前的OCR.space key
+    try {
+      const currentKey = this.ocrSpaceKeys[this.currentKeyIndex]
+      console.log(`尝试使用OCR.space (key: ${currentKey})...`)
+      
+      const provider = new OCRSpaceProvider(currentKey)
+      const result = await provider.recognize(imageData)
+      
+      if (result.success) {
+        console.log('OCR.space识别成功')
+        this.currentKeyIndex = this.getNextKeyIndex()
+        return result
       }
+      
+      this.currentKeyIndex = this.getNextKeyIndex()
+      errors.push(`OCR.space: ${result.error}`)
+      
+    } catch (error) {
+      this.currentKeyIndex = this.getNextKeyIndex()
+      errors.push(`OCR.space异常: ${error.message}`)
     }
 
-    // 尝试百度OCR
+    // OCR.space失败后直接尝试百度OCR
     try {
       console.log('尝试使用百度OCR...')
       const result = await this.baiduProvider.recognize(imageData)
@@ -290,7 +351,7 @@ export class OCRManager {
       errors.push(`百度OCR异常: ${error.message}`)
     }
 
-    // 尝试YDOCR
+    // 百度OCR也失败，最后尝试YDOCR
     try {
       console.log('尝试使用YDOCR...')
       const result = await this.ydProvider.recognize(imageData)
@@ -302,9 +363,10 @@ export class OCRManager {
     } catch (error) {
       errors.push(`YDOCR异常: ${error.message}`)
     }
-
+    
+    // 所有服务都失败时，返回成功但文本为空的结果
     const errorMessage = errors.join(' | ')
     console.log(`所有OCR服务都失败了: ${errorMessage}`)
-    return { success: false, error: errorMessage }
+    return { success: true, text: '' }
   }
 } 
