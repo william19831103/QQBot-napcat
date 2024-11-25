@@ -106,23 +106,68 @@ async function main() {
     
     // 处理群消息
     if (event.message_type === 'group') {
-      // 检查是否是图片消息
-      if (event.message[0]?.type === 'image') {
-        const imageUrl = event.message[0].data.url
-        const ocrResult = await ocrImage(imageUrl)
-        console.log('群图片OCR结果:', ocrResult)
+      try {
+        // 获取自己在群里的信息
+        const selfInfo = await api.get_group_member_info({
+          group_id: event.group_id,
+          user_id: Number(process.env.SELF_ID) // 机器人自己的QQ号
+        })
 
-        // 检查OCR结果中是否包含关键词
-        if (groupKeywordDetector.detect(ocrResult)) {
-          const matchedKeywords = groupKeywordDetector.getMatchedKeywords(ocrResult)
-          console.log('群图片匹配到的关键词:', matchedKeywords)
+        // 检查是否是管理员或群主
+        if (selfInfo.role !== 'admin' && selfInfo.role !== 'owner') {
+          console.log(`在群 ${event.group_id} 中不是管理员，跳过消息处理`)
+          return
+        }
+
+        // 检查是否是图片消息
+        if (event.message[0]?.type === 'image') {
+          const imageUrl = event.message[0].data.url
+          const ocrResult = await ocrImage(imageUrl)
+          console.log('群图片OCR结果:', ocrResult)
+
+          // 检查OCR结果中是否包含关键词
+          if (groupKeywordDetector.detect(ocrResult)) {
+            const matchedKeywords = groupKeywordDetector.getMatchedKeywords(ocrResult)
+            console.log('群图片匹配到的关键词:', matchedKeywords)
+
+            // 先撤回消息
+            await api.delete_msg({
+              message_id: event.message_id
+            })
+            console.log(`已撤回群 ${event.group_id} 中的图片消息`)
+
+            // 再踢出发送者
+            await api.set_group_kick({
+              group_id: event.group_id,
+              user_id: event.user_id,
+              reject_add_request: false
+            })
+            console.log(`已将用户 ${event.user_id} 踢出群 ${event.group_id}`)
+          }
+        }
+
+        // 检查文本消息中的关键词
+        const messageText = event.raw_message || event.message.map(segment => {
+          if (segment.type === 'text') {
+            return segment.data.text
+          }
+          return ''
+        }).join('')
+
+        console.log('群消息内容:', messageText)
+
+        // 检查关键词
+        if (groupKeywordDetector.detect(messageText)) {
+          const matchedKeywords = groupKeywordDetector.getMatchedKeywords(messageText)
+          console.log('匹配到的关键词:', matchedKeywords)
 
           // 先撤回消息
           await api.delete_msg({
             message_id: event.message_id
           })
-          console.log(`已撤回群 ${event.group_id} 中的图片消息`)
+          console.log(`已撤回群 ${event.group_id} 中的消息: ${messageText}`) 
 
+          /*
           // 再踢出发送者
           await api.set_group_kick({
             group_id: event.group_id,
@@ -130,42 +175,12 @@ async function main() {
             reject_add_request: false
           })
           console.log(`已将用户 ${event.user_id} 踢出群 ${event.group_id}`)
+          */
         }
+
+      } catch (error) {
+        console.error(`群 ${event.group_id} 消息处理错误:`, error)
       }
-
-      // 检查文本消息中的关键词
-      const messageText = event.raw_message || event.message.map(segment => {
-        if (segment.type === 'text') {
-          return segment.data.text
-        }
-        return ''
-      }).join('')
-
-      console.log('群消息内容:', messageText)
-
-      // 检查关键词
-      if (groupKeywordDetector.detect(messageText)) {
-        const matchedKeywords = groupKeywordDetector.getMatchedKeywords(messageText)
-        console.log('匹配到的关键词:', matchedKeywords)
-
-        // 先撤回消息
-        await api.delete_msg({
-          message_id: event.message_id
-        })
-        console.log(`已撤回群 ${event.group_id} 中的消息: ${messageText}`) 
-
-        /*
-        // 再踢出发送者
-        await api.set_group_kick({
-          group_id: event.group_id,
-          user_id: event.user_id,
-          reject_add_request: false
-        })
-        console.log(`已将用户 ${event.user_id} 踢出群 ${event.group_id}`)
-        */
-
-      }
-        
     }
 
     if (event.message_type === 'private') {
