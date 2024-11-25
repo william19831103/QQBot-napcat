@@ -155,7 +155,7 @@ export interface Send {
   image: {
     type: 'image'
     data: {
-      file: string
+      file: string | Buffer
       name?: string
       summary?: string
       sub_type?: string
@@ -164,14 +164,14 @@ export interface Send {
   file: {
     type: 'file'
     data: {
-      file: string
+      file: string | Buffer
       name?: string
     }
   }
   video: {
     type: 'video'
     data: {
-      file: string
+      file: string | Buffer
       name?: string
       thumb?: string
     }
@@ -179,7 +179,7 @@ export interface Send {
   record: {
     type: 'record'
     data: {
-      file: string
+      file: string | Buffer
       name?: string
     }
   }

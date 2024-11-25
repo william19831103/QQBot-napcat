@@ -1,16 +1,14 @@
-import { NCWebsocketApi } from '../src/NCWebsocketApi'
-import dotenv from 'dotenv'
+import { NCWebsocketApi } from '../src/NCWebsocketApi.js'
 import fetch from 'node-fetch'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
-import { CDKeyManager } from './CDKeyManager'
-import { CooldownManager } from './CooldownManager'
-import { KeywordDetector } from './KeywordDetector'
-import { OCRManager } from './OCRService'
-import { RecallCountManager } from './RecallCountManager'
-import { UserRecordManager } from './UserRecordManager'
-
+import { CDKeyManager } from './CDKeyManager.js'
+import { CooldownManager } from './CooldownManager.js'
+import { KeywordDetector } from './KeywordDetector.js'
+import { OCRManager } from './OCRService.js'
+import { RecallCountManager } from './RecallCountManager.js'
+import { UserRecordManager } from './UserRecordManager.js'
 
 // 获取当前文件的目录路径
 const __filename = fileURLToPath(import.meta.url)
@@ -235,7 +233,7 @@ async function main() {
               recallCountManager.resetRecalls(event.group_id, event.user_id)
             }
           } catch (error) {
-            console.error('处理违规消息时出错:', error)
+            console.error('处理违规消息出错:', error)
           }
         }
 

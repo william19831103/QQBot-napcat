@@ -30,15 +30,17 @@ export class KeywordDetector {
   public loadKeywords(): void {
     try {
       this.config = JSON.parse(fs.readFileSync(this.configPath, 'utf-8'))
-      // 合并 ad_keywords 和 ad_words
-      this.keywords = [...(this.config.ad_keywords || []), ...(this.config.ad_words || [])]
+      // 合并 ad_keywords 和 ad_words，添加空值检查
+      const adKeywords = this.config?.ad_keywords || []
+      const adWords = this.config?.ad_words || []
+      this.keywords = [...adKeywords, ...adWords]
+      
       console.log('配置重载成功:', {
         keywords: this.keywords,
-        matchCount: this.config.matchCount
+        matchCount: this.config?.matchCount || 3
       })
     } catch (error) {
       console.error('加载配置失败:', error)
-      // 确保 keywords 始终是数组
       this.keywords = []
       this.config = null
     }

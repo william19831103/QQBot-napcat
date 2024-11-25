@@ -1,4 +1,4 @@
-import WebSocket, { type Data } from 'isomorphic-ws'
+import WebSocket from 'isomorphic-ws'
 import { nanoid } from 'nanoid'
 import type {
   AllHandlers,
@@ -13,6 +13,9 @@ import type {
 } from './Interfaces.js'
 import { NCEventBus } from './NCEventBus.js'
 import { convertCQCodeToJSON, CQCodeDecode, logger } from './Utils.js'
+
+// 导入 WebSocket 事件类型
+import type { CloseEvent, MessageEvent, ErrorEvent } from 'ws'
 
 export class NCWebsocketBase {
   #debug: boolean
@@ -63,38 +66,38 @@ export class NCWebsocketBase {
     return new Promise<void>((resolve, reject) => {
       this.#eventBus.emit('socket.connecting', { reconnection: this.#reconnection })
       const socket = new WebSocket(`${this.#baseUrl}?access_token=${this.#accessToken}`)
+      
       socket.onopen = () => {
         this.#eventBus.emit('socket.open', { reconnection: this.#reconnection })
         this.#reconnection.nowAttempts = 1
-
         resolve()
       }
-      socket.onclose = async (event) => {
+
+      socket.onclose = (event: CloseEvent) => {
         this.#eventBus.emit('socket.close', {
           code: event.code,
           reason: event.reason,
           reconnection: this.#reconnection
         })
+        
         if (
           this.#reconnection.enable &&
           this.#reconnection.nowAttempts < this.#reconnection.attempts
         ) {
           this.#reconnection.nowAttempts++
-          setTimeout(async () => {
-            try {
-              await this.reconnect()
-            } catch (error) {
-              reject(error)
-            }
+          setTimeout(() => {
+            this.reconnect().catch(reject)
           }, this.#reconnection.delay)
         }
       }
-      socket.onmessage = (event) => this.#message(event.data)
-      socket.onerror = (event) => {
+
+      socket.onmessage = (event: WebSocket.MessageEvent) => this.#message(event.data)
+
+      socket.onerror = (event: WebSocket.ErrorEvent) => {
         this.#eventBus.emit('socket.error', {
           reconnection: this.#reconnection,
           error_type: 'connect_error',
-          errors: event?.error?.errors ?? [event?.error ?? null]
+          errors: [(event as any)?.error || 'Unknown error']
         })
 
         if (this.#throwPromise) {
@@ -109,7 +112,7 @@ export class NCWebsocketBase {
           reject({
             reconnection: this.#reconnection,
             error_type: 'connect_error',
-            errors: event.error.errors ?? [event.error]
+            errors: [(event as any)?.error || 'Unknown error']
           })
         }
       }
@@ -129,7 +132,7 @@ export class NCWebsocketBase {
     await this.connect()
   }
 
-  #message(data: Data) {
+  #message(data: any) {
     let json
     try {
       json = JSON.parse(data.toString())

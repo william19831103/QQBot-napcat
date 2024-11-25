@@ -1,6 +1,35 @@
 import crypto from 'crypto'
 import fetch from 'node-fetch'
 import FormData from 'form-data'
+import type { RequestInit } from 'node-fetch'
+
+// 扩展 RequestInit 类型
+interface ExtendedRequestInit extends RequestInit {
+  timeout?: number
+}
+
+// OCR.space 响应接口
+interface OCRSpaceResponse {
+  OCRExitCode: number
+  ParsedResults?: Array<{
+    ParsedText: string
+  }>
+  ErrorMessage?: string
+}
+
+// 百度 Token 响应接口
+interface BaiduTokenResponse {
+  access_token: string
+}
+
+// 百度 OCR 响应接口
+interface BaiduOCRResponse {
+  error_code?: number
+  error_msg?: string
+  words_result?: Array<{
+    words: string
+  }>
+}
 
 // OCR响应接口
 interface OCRResponse {
@@ -46,9 +75,9 @@ class OCRSpaceProvider implements OCRProvider {
         headers,
         body: new URLSearchParams(payload as any),
         timeout: 15000
-      })
+      } as ExtendedRequestInit)
 
-      const result = await response.json()
+      const result = await response.json() as OCRSpaceResponse
 
       if (result.OCRExitCode === 1 && result.ParsedResults) {
         return {
@@ -57,7 +86,7 @@ class OCRSpaceProvider implements OCRProvider {
         }
       }
       return { success: false, error: result.ErrorMessage || 'Unknown error' }
-    } catch (error) {
+    } catch (error: any) {
       if (error.type === 'request-timeout') {
         return { success: false, error: 'OCR.space 服务超时' }
       }
@@ -103,11 +132,11 @@ class BaiduOCRProvider implements OCRProvider {
       const response = await fetch(`${url}?${params}`, {
         method: 'POST',
         timeout: 10000
-      })
+      } as ExtendedRequestInit)
 
-      const result = await response.json()
+      const result = await response.json() as BaiduTokenResponse
       this.accessToken = result.access_token
-    } catch (error) {
+    } catch (error: any) {
       console.error('获取百度access_token失败:', error)
     }
   }
@@ -132,21 +161,21 @@ class BaiduOCRProvider implements OCRProvider {
         headers,
         body: data,
         timeout: 15000
-      })
+      } as ExtendedRequestInit)
 
-      const result = await response.json()
+      const result = await response.json() as BaiduOCRResponse
 
       if ('error_code' in result) {
         return { success: false, error: `百度OCR错误: ${result.error_msg}` }
       }
 
-      if ('words_result' in result) {
-        const text = result.words_result.map((item: any) => item.words).join('\n')
+      if ('words_result' in result && result.words_result) {
+        const text = result.words_result.map(item => item.words).join('\n')
         return { success: true, text }
       }
 
       return { success: false, error: '百度OCR返回数据格式错误' }
-    } catch (error) {
+    } catch (error: any) {
       if (error.type === 'request-timeout') {
         return { success: false, error: '百度OCR服务超时' }
       }
@@ -333,9 +362,9 @@ export class OCRManager {
       this.currentKeyIndex = this.getNextKeyIndex()
       errors.push(`OCR.space: ${result.error}`)
       
-    } catch (error) {
+    } catch (error: any) {
       this.currentKeyIndex = this.getNextKeyIndex()
-      errors.push(`OCR.space异常: ${error.message}`)
+      errors.push(`OCR.space异常: ${error?.message || '未知错误'}`)
     }
 
     // OCR.space失败后直接尝试百度OCR
@@ -347,8 +376,8 @@ export class OCRManager {
         return result
       }
       errors.push(`百度OCR: ${result.error}`)
-    } catch (error) {
-      errors.push(`百度OCR异常: ${error.message}`)
+    } catch (error: any) {
+      errors.push(`百度OCR异常: ${error?.message || '未知错误'}`)
     }
 
     // 百度OCR也失败，最后尝试YDOCR
@@ -360,8 +389,8 @@ export class OCRManager {
         return result
       }
       errors.push(`YDOCR: ${result.error}`)
-    } catch (error) {
-      errors.push(`YDOCR异常: ${error.message}`)
+    } catch (error: any) {
+      errors.push(`YDOCR异常: ${error?.message || '未知错误'}`)
     }
     
     // 所有服务都失败时，返回成功但文本为空的结果
