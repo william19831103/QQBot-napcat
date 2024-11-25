@@ -16,24 +16,27 @@ import { UserRecordManager } from './UserRecordManager'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// 加载环境变量和关键词配置
-dotenv.config()
+// 加载配置文件
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
 
 // 初始化 CDKey 管理器
 const cdkeyManager = new CDKeyManager()
 
-// 初始化冷却管理器（10秒冷却时间）
-const cooldownManager = new CooldownManager(10)
+// 初始化冷却管理器
+const cooldownManager = new CooldownManager(config.cooldown.messageInterval)
 
 // 初始化关键词检测器
 const groupKeywordDetector = new KeywordDetector(path.join(__dirname, 'config.json'))
 
-// 初始化OCR管理器
-const ocrManager = new OCRManager()
+// 初始化OCR管理器（使用配置中的参数）
+const ocrManager = new OCRManager(config.ocr)
 
-// 初始化撤回次数管理器
-const recallCountManager = new RecallCountManager()
+// 初始化撤回次数管理器（使用配置中的参数）
+const recallCountManager = new RecallCountManager(
+  config.recall.maxTextRecalls,
+  config.recall.maxImageRecalls,
+  config.recall.timeWindow
+)
 
 // 初始化用户记录管理器
 const userRecordManager = new UserRecordManager()
@@ -97,10 +100,10 @@ async function ocrImage(imageUrl: string): Promise<string> {
 
 async function main() {
   const api = new NCWebsocketApi({
-    protocol: 'ws',
-    host: process.env.WS_HOST ?? '',
-    port: Number(process.env.WS_PORT),
-    accessToken: process.env.ACCESS_TOKEN
+    protocol: config.bot.protocol,
+    host: config.bot.host,
+    port: config.bot.port,
+    accessToken: config.bot.accessToken
   })
 
   api.on('meta_event', event => {
@@ -124,7 +127,7 @@ async function main() {
         // 获取自己在群里的信息
         const selfInfo = await api.get_group_member_info({
           group_id: event.group_id,
-          user_id: Number(process.env.SELF_ID)
+          user_id: config.bot.selfId
         })
 
         // 检查是否是管理员或群主

@@ -1,4 +1,35 @@
 {
+  "bot": {
+    "protocol": "ws",
+    "host": "124.223.40.234",
+    "port": 8888,
+    "accessToken": "你的访问令牌",
+    "selfId": 3869388623
+  },
+  "ocr": {
+    "ocrSpaceKeys": [
+      "K87108387888957",
+      "K89499185488957",
+      "K82081561288957"
+    ],
+    "baidu": {
+      "appId": "116369516",
+      "apiKey": "MqDczhgq3uYFgLZ4G2sF7UPT",
+      "secretKey": "b2DZEG2EQsF003S9O3WLaVrncB75jFHy"
+    },
+    "ydocr": {
+      "userId": "ghjcy6bnuaxdusidcwwv2qfd",
+      "userKey": "g7dubchas4cplaix5lusulxs"
+    }
+  },
+  "cooldown": {
+    "messageInterval": 10
+  },
+  "recall": {
+    "maxTextRecalls": 5,
+    "maxImageRecalls": 1,
+    "timeWindow": 86400000
+  },
   "ad_keywords": [
     "新区",
     "新开",
@@ -17,16 +48,15 @@
     "官网",
     "群号",
     "交流群"
-
   ],
   "ad_words": [
-
+    "www",
     "新开",
     "开放",
     "今日",
     "刚开一秒",
     "微变",
-    "无CD", 
+    "无CD",
     "急速",
     "单刷",
     "公益服",
