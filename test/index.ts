@@ -9,12 +9,6 @@ import { CooldownManager } from './CooldownManager'
 import { KeywordDetector } from './KeywordDetector'
 import { OCRManager } from './OCRService'
 
-// OCR响应接口定义
-interface OCRResponse {
-  success: boolean;
-  text?: string;
-  error?: string;
-}
 
 // 获取当前文件的目录路径
 const __filename = fileURLToPath(import.meta.url)
