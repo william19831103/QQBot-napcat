@@ -1,13 +1,16 @@
 export class RecallCountManager {
   private recallCounts: Map<string, number> // groupId_userId -> 撤回次数
   private lastRecallTimes: Map<string, number[]> // groupId_userId -> 撤回时间数组
-  private readonly MAX_TEXT_RECALLS = 5 // 文本消息最大撤回次数
-  private readonly MAX_IMAGE_RECALLS = 1 // 图片消息最大撤回次数
-  private readonly TIME_WINDOW = 24 * 60 * 60 * 1000 // 24小时的毫秒数
+  private readonly MAX_TEXT_RECALLS: number // 文本消息最大撤回次数
+  private readonly MAX_IMAGE_RECALLS: number // 图片消息最大撤回次数
+  private readonly TIME_WINDOW: number // 24小时的毫秒数
 
-  constructor() {
+  constructor(maxTextRecalls: number, maxImageRecalls: number, timeWindow: number) {
     this.recallCounts = new Map()
     this.lastRecallTimes = new Map()
+    this.MAX_TEXT_RECALLS = maxTextRecalls
+    this.MAX_IMAGE_RECALLS = maxImageRecalls
+    this.TIME_WINDOW = timeWindow
   }
 
   private getKey(groupId: number, userId: number, isImage: boolean): string {

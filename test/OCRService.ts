@@ -290,21 +290,21 @@ class YDOCRProvider implements OCRProvider {
 
 // OCR管理器
 export class OCRManager {
-  private ocrSpaceKeys = ['K87108387888957', 'K89499185488957', 'K82081561288957']
-  private currentKeyIndex = 0  // 当前使用的key索引
+  private ocrSpaceKeys: string[]
+  private currentKeyIndex = 0
   private baiduProvider: BaiduOCRProvider
   private ydProvider: YDOCRProvider
 
-  
-  constructor() {
+  constructor(config: any) {
+    this.ocrSpaceKeys = config.ocrSpaceKeys
     this.baiduProvider = new BaiduOCRProvider(
-      '116369516',
-      'MqDczhgq3uYFgLZ4G2sF7UPT',
-      'b2DZEG2EQsF003S9O3WLaVrncB75jFHy'
+      config.baidu.appId,
+      config.baidu.apiKey,
+      config.baidu.secretKey
     )
     this.ydProvider = new YDOCRProvider(
-      'ghjcy6bnuaxdusidcwwv2qfd',
-      'g7dubchas4cplaix5lusulxs'
+      config.ydocr.userId,
+      config.ydocr.userKey
     )
   }
 
