@@ -169,13 +169,23 @@ async function main() {
     }
 
     if (event.message_type === 'private') {
+      // 检查用户是否在冷却中
+      if (!cooldownManager.canSendMessage(event.user_id)) {
+        return
+      }
+
       // 检查是否是管理员命令
       if (event.message[0]?.type === 'text' && event.message[0].data.text === '/rl') {
         groupKeywordDetector.loadKeywords()
         api.send_private_msg({
           user_id: event.user_id,
-          message: [{ type: 'text', data: { text: `关键词重载成功！当前关键词：${groupKeywordDetector.getCurrentKeywords().join(', ')}` }}]
+          message: [{ 
+            type: 'text', 
+            data: { text: `关键词重载成功！当前关键词：${groupKeywordDetector.getCurrentKeywords().join(', ')}` }
+          }]
         })
+        // 更新用户的冷却时间
+        cooldownManager.updateLastSendTime(event.user_id)
         return
       }
 
@@ -183,14 +193,18 @@ async function main() {
       if (event.message[0]?.type !== 'image') {
         api.send_private_msg({
           user_id: event.user_id,
-          message: [{ type: 'text', data: { text: '欢迎领取每日宣传，请发送游戏截图进行给我验证，截图内宣传内容文字要清晰！' }}]
+          message: [{ 
+            type: 'text', 
+            data: { text: '欢迎领取每日宣传，请发送游戏截图进行给我验证，截图内宣传内容文字要清晰！' }
+          }]
         })
+        // 更新用户的冷却时间
+        cooldownManager.updateLastSendTime(event.user_id)
         return
       }
 
       // 首先检查用户是否已经领取过 CDKey
       if (!cdkeyManager.canUserGetKey(event.user_id)) {
-        // 获取用户今天已领取的卡密
         const userKey = cdkeyManager.getUserKey(event.user_id)
         
         api.send_private_msg({
@@ -198,10 +212,12 @@ async function main() {
           message: [{ 
             type: 'text', 
             data: { 
-              text: `您今天已经领取过卡密��：${userKey}。每日一次，请明天再来！每日午夜12点刷新！` 
+              text: `您今天已经领取过卡密了：${userKey}。每日一次，请明天再来！每日午夜12点刷新！` 
             }
           }]
         })
+        // 更新用户的冷却时间
+        cooldownManager.updateLastSendTime(event.user_id)
         return
       }
 
@@ -209,8 +225,13 @@ async function main() {
       if (cdkeyManager.getRemainingCount() === 0) {
         api.send_private_msg({
           user_id: event.user_id,
-          message: [{ type: 'text', data: { text: '抱歉，卡密已经发完了！请联系老G！' }}]
+          message: [{ 
+            type: 'text', 
+            data: { text: '抱歉，卡密已经发完了！请联系老G！' }
+          }]
         })
+        // 更新用户的冷却时间
+        cooldownManager.updateLastSendTime(event.user_id)
         return
       }
 
@@ -219,11 +240,7 @@ async function main() {
       const ocrResult = await ocrImage(imageUrl)
       const matchResult = checkTextMatch(ocrResult)
       
-      //console.log('OCR结果:', ocrResult)
-      //console.log('匹配结果:', matchResult)
-      
       if (matchResult.isMatch) {
-        // 获取新的 CDKey
         const cdkey = cdkeyManager.getNewKey(event.user_id)
         
         if (!cdkey) {
@@ -234,10 +251,11 @@ async function main() {
               data: { text: '抱歉，卡密已经发完了！请联系管理员。' }
             }]
           })
+          // 更新用户的冷却时间
+          cooldownManager.updateLastSendTime(event.user_id)
           return
         }
 
-        // 直接发送卡密消息
         api.send_private_msg({
           user_id: event.user_id,
           message: [{
@@ -256,6 +274,8 @@ async function main() {
           }]
         })
       }
+      // 更新用户的冷却时间
+      cooldownManager.updateLastSendTime(event.user_id)
     }
   })
 
