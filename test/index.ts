@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename)
 
 // 加载环境变量和关键词配置
 dotenv.config()
-const matchConfig = JSON.parse(fs.readFileSync(path.join(__dirname, 'MatchString.json'), 'utf-8'))
+const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
 
 // 初始化 CDKey 管理器
 const cdkeyManager = new CDKeyManager()
@@ -24,8 +24,8 @@ const cdkeyManager = new CDKeyManager()
 // 初始化冷却管理器（10秒冷却时间）
 const cooldownManager = new CooldownManager(10)
 
-// 初始化关键词检测器
-const groupKeywordDetector = new KeywordDetector(path.join(__dirname, 'adwords.json'))
+// 初始化关键词检测器（使用新的配置文件）
+const groupKeywordDetector = new KeywordDetector(config.adwords)
 
 // 初始化OCR管理器
 const ocrManager = new OCRManager()
@@ -36,20 +36,20 @@ function checkTextMatch(text: string): {
   matchedWords: string[],
   matchCount: number
 } {
-  const matchedWords = matchConfig.keywords.filter(keyword => 
+  const matchedWords = config.keywords.filter(keyword => 
     text.includes(keyword)
   )
 
   // 添加调试日志
   console.log('匹配结果:', {
-    keywords: matchConfig.keywords,
+    keywords: config.keywords,
     matchedWords,
     matchCount: matchedWords.length,
-    isMatch: matchedWords.length >= 3
+    isMatch: matchedWords.length >= config.matchCount
   })
 
   return {
-    isMatch: matchedWords.length >= 3, // 匹配3个或以上关键词
+    isMatch: matchedWords.length >= config.matchCount, // 使用配置中的匹配数量
     matchedWords,
     matchCount: matchedWords.length
   }
@@ -141,14 +141,23 @@ async function main() {
         }
 
         // 检查文本消息中的关键词
-        const messageText = event.raw_message || event.message.map(segment => {
+        const messageText = event.message.reduce((text, segment) => {
           if (segment.type === 'text') {
-            return segment.data.text
+            return text + segment.data.text
+          } else if (segment.type === 'quick_action') {
+            // 忽略快速操作
+            return text
           }
-          return ''
-        }).join('')
+          return text
+        }, '') || event.raw_message || ''
 
         console.log('群消息内容:', messageText)
+
+        // 如果消息为空，直接返回
+        if (!messageText.trim()) {
+          console.log('消息内容为空，跳过检查')
+          return
+        }
 
         // 检查关键词
         if (groupKeywordDetector.detect(messageText)) {
