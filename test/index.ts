@@ -8,6 +8,8 @@ import { CDKeyManager } from './CDKeyManager'
 import { CooldownManager } from './CooldownManager'
 import { KeywordDetector } from './KeywordDetector'
 import { OCRManager } from './OCRService'
+import { RecallCountManager } from './RecallCountManager'
+import { UserRecordManager } from './UserRecordManager'
 
 
 // 获取当前文件的目录路径
@@ -29,6 +31,12 @@ const groupKeywordDetector = new KeywordDetector(config.adwords)
 
 // 初始化OCR管理器
 const ocrManager = new OCRManager()
+
+// 初始化撤回次数管理器
+const recallCountManager = new RecallCountManager()
+
+// 初始化用户记录管理器
+const userRecordManager = new UserRecordManager()
 
 // 检查文本匹配度
 function checkTextMatch(text: string): {
@@ -131,17 +139,33 @@ async function main() {
               })
               console.log(`已撤回群 ${event.group_id} 中的图片消息`)
 
-              // 再踢出发送者
-              await api.set_group_kick({
-                group_id: event.group_id,
-                user_id: event.user_id,
-                reject_add_request: false
-              })
-              console.log(`已将用户 ${event.user_id} 踢出群 ${event.group_id}`)
+              // 记录撤回并检查是否需要踢出（传入 isImage = true）
+              const shouldKick = recallCountManager.addRecall(event.group_id, event.user_id, true)
+              const recallCount = recallCountManager.getRecallCount(event.group_id, event.user_id, true)
+              const maxRecalls = recallCountManager.getMaxRecalls(true)
+              console.log(`用户 ${event.user_id} 在群 ${event.group_id} 的24小时内图片撤回次数: ${recallCount}/${maxRecalls}`)
+
+              if (shouldKick) {
+                await api.set_group_kick({
+                  group_id: event.group_id,
+                  user_id: event.user_id,
+                  reject_add_request: false
+                })
+                console.log(`用户 ${event.user_id} 因24小时内图片被撤回次数过多(${recallCount}/${maxRecalls}次)被踢出群 ${event.group_id}`)
+                
+                // 记录被踢出的用户
+                userRecordManager.recordKick(
+                  event.user_id,
+                  event.group_id,
+                  `图片违规次数过多(${recallCount}/${maxRecalls}次)`
+                )
+                
+                recallCountManager.resetRecalls(event.group_id, event.user_id)
+              }
             } catch (error) {
               console.error('处理违规消息时出错:', error)
             }
-            return // 处理完违规内容后直接返回
+            return
           }
         }
 
@@ -167,21 +191,34 @@ async function main() {
           console.log('匹配到的关键词:', matchedKeywords)
 
           try {
-            // 先撤回消息
             await api.delete_msg({
               message_id: event.message_id
             })
             console.log(`已撤回群 ${event.group_id} 中的消息: ${messageText}`)
 
-            /*
-            // 再踢出发送者
-            await api.set_group_kick({
-              group_id: event.group_id,
-              user_id: event.user_id,
-              reject_add_request: false
-            })
-            console.log(`已将用户 ${event.user_id} 踢出群 ${event.group_id}`)
-            */
+            // 记录撤回并检查是否需要踢出（传入 isImage = false）
+            const shouldKick = recallCountManager.addRecall(event.group_id, event.user_id, false)
+            const recallCount = recallCountManager.getRecallCount(event.group_id, event.user_id, false)
+            const maxRecalls = recallCountManager.getMaxRecalls(false)
+            console.log(`用户 ${event.user_id} 在群 ${event.group_id} 的24小时内文本撤回次数: ${recallCount}/${maxRecalls}`)
+
+            if (shouldKick) {
+              await api.set_group_kick({
+                group_id: event.group_id,
+                user_id: event.user_id,
+                reject_add_request: false
+              })
+              console.log(`用户 ${event.user_id} 因24小时内文本被撤回次数过多(${recallCount}/${maxRecalls}次)被踢出群 ${event.group_id}`)
+              
+              // 记录被踢出的用户
+              userRecordManager.recordKick(
+                event.user_id,
+                event.group_id,
+                `文本违规次数过多(${recallCount}/${maxRecalls}次)`
+              )
+              
+              recallCountManager.resetRecalls(event.group_id, event.user_id)
+            }
           } catch (error) {
             console.error('处理违规消息时出错:', error)
           }
