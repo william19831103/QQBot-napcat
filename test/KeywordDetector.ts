@@ -1,6 +1,13 @@
 import * as fs from 'fs'
 import * as path from 'path'
 
+// 配置接口
+interface Config {
+  ad_keywords: string[]
+  ad_words: string[]
+  matchCount: number
+}
+
 // 检测结果接口
 interface DetectionResult {
   detected: boolean
@@ -11,23 +18,40 @@ interface DetectionResult {
 export class KeywordDetector {
   private keywords: string[]
   private readonly MAX_TEXT_LENGTH = 200
+  private configPath: string
+  private config: Config | null = null
 
   constructor(configPath: string) {
     this.keywords = []
-    this.loadKeywords(configPath)
+    this.configPath = configPath
+    this.loadKeywords()
   }
 
-  public loadKeywords(configPath?: string): void {
+  public loadKeywords(): void {
     try {
-      const config = JSON.parse(fs.readFileSync(configPath || path.join(__dirname, 'config.json'), 'utf-8'))
+      this.config = JSON.parse(fs.readFileSync(this.configPath, 'utf-8'))
       // 合并 ad_keywords 和 ad_words
-      this.keywords = [...(config.ad_keywords || []), ...(config.ad_words || [])]
-      console.log('关键词重载成功:', this.keywords)
+      this.keywords = [...(this.config.ad_keywords || []), ...(this.config.ad_words || [])]
+      console.log('配置重载成功:', {
+        keywords: this.keywords,
+        matchCount: this.config.matchCount
+      })
     } catch (error) {
-      console.error('加载关键词失败:', error)
+      console.error('加载配置失败:', error)
       // 确保 keywords 始终是数组
       this.keywords = []
+      this.config = null
     }
+  }
+
+  // 获取匹配所需数量
+  public getMatchCount(): number {
+    return this.config?.matchCount || 3 // 默认值为3
+  }
+
+  // 获取当前完整配置
+  public getCurrentConfig(): Config | null {
+    return this.config
   }
 
   // 检测关键词

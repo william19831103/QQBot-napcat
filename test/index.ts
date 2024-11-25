@@ -44,22 +44,34 @@ function checkTextMatch(text: string): {
   matchedWords: string[],
   matchCount: number
 } {
-  const matchedWords = config.keywords.filter(keyword => 
-    text.includes(keyword)
-  )
+  try {
+    // 从 KeywordDetector 获取关键词列表
+    const keywords = groupKeywordDetector.getCurrentKeywords()
+    const matchedWords = keywords.filter(keyword => text.includes(keyword))
+    const requiredMatchCount = groupKeywordDetector.getMatchCount()
 
-  // 添加调试日志
-  console.log('匹配结果:', {
-    keywords: config.keywords,
-    matchedWords,
-    matchCount: matchedWords.length,
-    isMatch: matchedWords.length >= config.matchCount
-  })
+    // 添加调试日志
+    console.log('匹配结果:', {
+      keywords,
+      matchedWords,
+      matchCount: matchedWords.length,
+      requiredMatchCount,
+      isMatch: matchedWords.length >= requiredMatchCount
+    })
 
-  return {
-    isMatch: matchedWords.length >= config.matchCount, // 使用配置中的匹配数量
-    matchedWords,
-    matchCount: matchedWords.length
+    return {
+      isMatch: matchedWords.length >= requiredMatchCount,
+      matchedWords,
+      matchCount: matchedWords.length
+    }
+  } catch (error) {
+    console.error('文本匹配检查失败:', error)
+    // 发生错误时返回安全的默认值
+    return {
+      isMatch: false,
+      matchedWords: [],
+      matchCount: 0
+    }
   }
 }
 
@@ -238,13 +250,24 @@ async function main() {
       // 检查是否是管理员命令
       if (event.message[0]?.type === 'text' && event.message[0].data.text === '/rl') {
         groupKeywordDetector.loadKeywords()
+        const config = groupKeywordDetector.getCurrentConfig()
+        
+        let reloadMessage = '配置重载成功！ '
+        if (config) {
+          reloadMessage += `当前关键词：${groupKeywordDetector.getCurrentKeywords().join(', ')}`
+
+        } else {
+          reloadMessage += '警告：配置加载失败，使用默认值'
+        }
+
         api.send_private_msg({
           user_id: event.user_id,
           message: [{ 
             type: 'text', 
-            data: { text: `关键词重载成功！当前关键词：${groupKeywordDetector.getCurrentKeywords().join(', ')}` }
+            data: { text: reloadMessage }
           }]
         })
+        
         // 更新用户的冷却时间
         cooldownManager.updateLastSendTime(event.user_id)
         return
