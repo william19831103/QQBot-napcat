@@ -18,12 +18,42 @@ export class KeywordDetector {
     }
   }
 
+  // 检测连续数字
+  private detectContinuousNumbers(text: string): boolean {
+    // 匹配6-10位连续数字
+    const numberPattern = /\d{8,10}/g
+    const matches = text.match(numberPattern)
+    if (matches) {
+      console.log('检测到连续数字:', matches)
+      return true
+    }
+    return false
+  }
+
   public detect(text: string): boolean {
-    return this.keywords.some(keyword => text.includes(keyword))
+    // 先检查关键词
+    const hasKeyword = this.keywords.some(keyword => text.includes(keyword))
+    if (hasKeyword) {
+      return true
+    }
+    
+    // 再检查连续数字
+    return this.detectContinuousNumbers(text)
   }
 
   public getMatchedKeywords(text: string): string[] {
-    return this.keywords.filter(keyword => text.includes(keyword))
+    const matchedKeywords = this.keywords.filter(keyword => text.includes(keyword))
+    
+    // 检查连续数字
+    const numberPattern = /\d{6,10}/g
+    const matches = text.match(numberPattern) || []
+    
+    // 如果找到连续数字，添加到匹配结果中
+    if (matches.length > 0) {
+      matchedKeywords.push(...matches.map(num => `连续数字(${num})`))
+    }
+    
+    return matchedKeywords
   }
 
   public getCurrentKeywords(): string[] {
