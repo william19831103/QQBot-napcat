@@ -12,22 +12,31 @@ export class KeywordDetector {
   private keywords: string[]
   private readonly MAX_TEXT_LENGTH = 200
 
-  constructor(keywords: string[]) {
-    this.keywords = keywords
+  constructor(configPath: string) {
+    this.keywords = []
+    this.loadKeywords(configPath)
   }
 
-  public loadKeywords(): void {
+  public loadKeywords(configPath?: string): void {
     try {
-      const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
-      this.keywords = config.adwords
+      const config = JSON.parse(fs.readFileSync(configPath || path.join(__dirname, 'config.json'), 'utf-8'))
+      // 合并 ad_keywords 和 ad_words
+      this.keywords = [...(config.ad_keywords || []), ...(config.ad_words || [])]
       console.log('关键词重载成功:', this.keywords)
     } catch (error) {
       console.error('加载关键词失败:', error)
+      // 确保 keywords 始终是数组
+      this.keywords = []
     }
   }
 
   // 检测关键词
   private detectKeywords(text: string): DetectionResult {
+    if (!Array.isArray(this.keywords)) {
+      console.error('关键词列表无效:', this.keywords)
+      return { detected: false, type: 'none' }
+    }
+
     const matches = this.keywords.filter(keyword => text.includes(keyword))
     if (matches.length > 0) {
       console.log('检测到关键词:', matches)

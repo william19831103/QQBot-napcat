@@ -26,8 +26,8 @@ const cdkeyManager = new CDKeyManager()
 // 初始化冷却管理器（10秒冷却时间）
 const cooldownManager = new CooldownManager(10)
 
-// 初始化关键词检测器（使用新的配置文件）
-const groupKeywordDetector = new KeywordDetector(config.adwords)
+// 初始化关键词检测器
+const groupKeywordDetector = new KeywordDetector(path.join(__dirname, 'config.json'))
 
 // 初始化OCR管理器
 const ocrManager = new OCRManager()
