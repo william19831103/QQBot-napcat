@@ -252,24 +252,8 @@ async function main() {
         groupKeywordDetector.loadKeywords()
         const config = groupKeywordDetector.getCurrentConfig()
         
-        let reloadMessage = '配置重载成功！ '
-        if (config) {
-          reloadMessage += `当前关键词：${groupKeywordDetector.getCurrentKeywords().join(', ')}`
-
-        } else {
-          reloadMessage += '警告：配置加载失败，使用默认值'
-        }
-
-        api.send_private_msg({
-          user_id: event.user_id,
-          message: [{ 
-            type: 'text', 
-            data: { text: reloadMessage }
-          }]
-        })
-        
         // 更新用户的冷却时间
-        cooldownManager.updateLastSendTime(event.user_id)
+        //cooldownManager.updateLastSendTime(event.user_id)
         return
       }
 
