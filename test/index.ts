@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url'
 import { CDKeyManager } from './CDKeyManager'
 import { CooldownManager } from './CooldownManager'
 import { KeywordDetector } from './KeywordDetector'
+import { OCRManager } from './OCRService'
 
 // OCR响应接口定义
 interface OCRResponse {
@@ -31,6 +32,9 @@ const cooldownManager = new CooldownManager(10)
 
 // 初始化关键词检测器
 const groupKeywordDetector = new KeywordDetector(path.join(__dirname, 'adwords.json'))
+
+// 初始化OCR管理器
+const ocrManager = new OCRManager()
 
 // 检查文本匹配度
 function checkTextMatch(text: string): {
@@ -65,22 +69,8 @@ async function ocrImage(imageUrl: string): Promise<string> {
     const arrayBuffer = await response.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
     
-    // 创建 FormData 对象
-    const formData = new FormData()
-    const blob = new Blob([buffer], { type: 'image/png' })
-    formData.append('image', blob, 'image.png')
-    
-    // 发送到 OCR 服务
-    const ocrResponse = await fetch('http://localhost:3000/ocr', {
-      method: 'POST',
-      body: formData
-    })
-    
-    if (!ocrResponse.ok) {
-      throw new Error(`OCR服务响应错误: ${ocrResponse.status}`)
-    }
-    
-    const result = await ocrResponse.json() as OCRResponse
+    // 使用 OCRManager 进行识别
+    const result = await ocrManager.recognize(buffer)
     
     if (!result.success) {
       throw new Error(result.error || 'OCR识别失败')
