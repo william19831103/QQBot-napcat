@@ -104,7 +104,7 @@ async function main() {
         // 获取自己在群里的信息
         const selfInfo = await api.get_group_member_info({
           group_id: event.group_id,
-          user_id: Number(process.env.SELF_ID) // 机器人自己的QQ号
+          user_id: Number(process.env.SELF_ID)
         })
 
         // 检查是否是管理员或群主
@@ -119,34 +119,36 @@ async function main() {
           const ocrResult = await ocrImage(imageUrl)
           console.log('群图片OCR结果:', ocrResult)
 
-          // 检查OCR结果中是否包含关键词
-          if (groupKeywordDetector.detect(ocrResult)) {
-            const matchedKeywords = groupKeywordDetector.getMatchedKeywords(ocrResult)
+          // 检查OCR结果中是否包含违规内容
+          const matchedKeywords = groupKeywordDetector.getMatchedKeywords(ocrResult)
+          if (matchedKeywords.length > 0) {
             console.log('群图片匹配到的关键词:', matchedKeywords)
 
-            // 先撤回消息
-            await api.delete_msg({
-              message_id: event.message_id
-            })
-            console.log(`已撤回群 ${event.group_id} 中的图片消息`)
+            try {
+              // 先撤回消息
+              await api.delete_msg({
+                message_id: event.message_id
+              })
+              console.log(`已撤回群 ${event.group_id} 中的图片消息`)
 
-            // 再踢出发送者
-            await api.set_group_kick({
-              group_id: event.group_id,
-              user_id: event.user_id,
-              reject_add_request: false
-            })
-            console.log(`已将用户 ${event.user_id} 踢出群 ${event.group_id}`)
+              // 再踢出发送者
+              await api.set_group_kick({
+                group_id: event.group_id,
+                user_id: event.user_id,
+                reject_add_request: false
+              })
+              console.log(`已将用户 ${event.user_id} 踢出群 ${event.group_id}`)
+            } catch (error) {
+              console.error('处理违规消息时出错:', error)
+            }
+            return // 处理完违规内容后直接返回
           }
         }
 
-        // 检查文本消息中的关键词
+        // 检查文本消息
         const messageText = event.message.reduce((text, segment) => {
           if (segment.type === 'text') {
             return text + segment.data.text
-          } else if (segment.type === 'quick_action') {
-            // 忽略快速操作
-            return text
           }
           return text
         }, '') || event.raw_message || ''
@@ -159,26 +161,30 @@ async function main() {
           return
         }
 
-        // 检查关键词
-        if (groupKeywordDetector.detect(messageText)) {
-          const matchedKeywords = groupKeywordDetector.getMatchedKeywords(messageText)
+        // 检查文本是否违规
+        const matchedKeywords = groupKeywordDetector.getMatchedKeywords(messageText)
+        if (matchedKeywords.length > 0) {
           console.log('匹配到的关键词:', matchedKeywords)
 
-          // 先撤回消息
-          await api.delete_msg({
-            message_id: event.message_id
-          })
-          console.log(`已撤回群 ${event.group_id} 中的消息: ${messageText}`) 
+          try {
+            // 先撤回消息
+            await api.delete_msg({
+              message_id: event.message_id
+            })
+            console.log(`已撤回群 ${event.group_id} 中的消息: ${messageText}`)
 
-          /*
-          // 再踢出发送者
-          await api.set_group_kick({
-            group_id: event.group_id,
-            user_id: event.user_id,
-            reject_add_request: false
-          })
-          console.log(`已将用户 ${event.user_id} 踢出群 ${event.group_id}`)
-          */
+            /*
+            // 再踢出发送者
+            await api.set_group_kick({
+              group_id: event.group_id,
+              user_id: event.user_id,
+              reject_add_request: false
+            })
+            console.log(`已将用户 ${event.user_id} 踢出群 ${event.group_id}`)
+            */
+          } catch (error) {
+            console.error('处理违规消息时出错:', error)
+          }
         }
 
       } catch (error) {
