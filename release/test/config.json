@@ -1,0 +1,84 @@
+{
+  "bot": {
+    "protocol": "ws",
+    "host": "124.223.40.234",
+    "port": 8888,
+    "accessToken": "你的访问令牌",
+    "selfId": 2843098167
+  },
+  "ocr": {
+    "ocrSpaceKeys": [
+      "K87108387888957",
+      "K89499185488957",
+      "K82081561288957"
+    ],
+    "baidu": {
+      "appId": "116369516",
+      "apiKey": "MqDczhgq3uYFgLZ4G2sF7UPT",
+      "secretKey": "b2DZEG2EQsF003S9O3WLaVrncB75jFHy"
+    },
+    "ydocr": {
+      "userId": "ghjcy6bnuaxdusidcwwv2qfd",
+      "userKey": "g7dubchas4cplaix5lusulxs"
+    }
+  },
+  "cooldown": {
+    "messageInterval": 10
+  },
+  "recall": {
+    "maxTextRecalls": 5,
+    "maxImageRecalls": 1,
+    "timeWindow": 86400000
+  },
+    
+  "Match_keywordsForReward": [    
+    "海盗船",
+    "暗黑",
+    "单刷",
+    "娱乐",
+    "经典",
+    "731502065"
+  ],
+
+  "keywordMsgFilter": [
+    "新区",
+    "新开",
+    "公益服",
+    "长期服",
+    "稳定运营",
+    "独家",
+    "火爆",
+    "3.35",
+    "335",
+    "微变",
+    "双线",
+    "无限刷",
+    "公平公正",
+    "QQ群",
+    "官网",
+    "群号",
+    "交流群"
+  ],
+  "keywordImageFilter": [
+    "新开",
+    "开放",
+    "今日",
+    "刚开一秒",
+    "微变",
+    "无CD",
+    "急速",
+    "单刷",
+    "公益服",
+    "养老服",
+    "白嫖服",
+    "耐玩",
+    "独家",
+    "神作",
+    "精品",
+    "长久",
+    "群号",
+    "交流群",
+    "QQ"
+  ],
+  "matchCount": 3
+} 

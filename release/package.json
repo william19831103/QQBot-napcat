@@ -1,12 +1,67 @@
 {
-  "name": "qq-bot",
-  "version": "1.0.0",
+  "name": "node-napcat-ts",
+  "version": "0.4.0",
+  "description": "napcat SDK for Node",
+  "license": "MIT",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "./dist/**/*"
+  ],
+  "keywords": [
+    "websocket",
+    "qq-robot",
+    "cq-websocket",
+    "onebot11",
+    "typescript",
+    "napcat"
+  ],
+  "author": {
+    "name": "huankong233",
+    "url": "https://github.com/huankong233"
+  },
+  "contributors": [
+    {
+      "name": "kanocence",
+      "url": "https://github.com/kanocence"
+    },
+    {
+      "name": "jacksixth",
+      "url": "https://github.com/jacksixth"
+    },
+    {
+      "name": "YunYouJun",
+      "url": "https://github.com/YunYouJun"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/huankong233/node-napcat-ts.git"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx test/index.ts",
+    "start": "node dist/test/index.js",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
-    "node-fetch": "^3.3.2",
-    "form-data": "^4.0.0",
-    "ws": "^8.18.0",
+    "@tensorflow/tfjs": "^4.22.0",
     "isomorphic-ws": "^5.0.0",
-    "nanoid": "^3.3.7"
-  }
+    "nanoid": "^3.3.7",
+    "ws": "^8.18.0",
+    "node-fetch": "^3.3.2",
+    "form-data": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.3",
+    "@types/ws": "^8.5.12",
+    "@types/node-fetch": "^2.6.11",
+    "@types/form-data": "^2.5.0",
+    "dotenv": "^16.4.5",
+    "nodemon": "^3.1.7",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  },
+  "bin": "./dist/test/index.js"
 }
