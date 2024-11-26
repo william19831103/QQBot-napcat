@@ -40,19 +40,36 @@ const recallCountManager = new RecallCountManager(
 const userRecordManager = new UserRecordManager()
 
 // 检查文本匹配度
-function checkTextMatch(text: string): {
+function checkTextMatch(
+  text: string,
+  matchType: 'reward' | 'imageFilter' | 'messageFilter'
+): {
   isMatch: boolean,
   matchedWords: string[],
   matchCount: number
 } {
   try {
-    // 从 KeywordDetector 获取关键词列表
-    const keywords = groupKeywordDetector.getCurrentKeywords()
+    let keywords: string[] = []
+    let requiredMatchCount = 1 // 默认匹配数为1
+
+    // 根据不同场景选择不同的关键词列表和匹配要求
+    switch (matchType) {
+      case 'reward':
+        keywords = groupKeywordDetector.getRewardKeywords()
+        requiredMatchCount = groupKeywordDetector.getRewardMatchCount() // 奖励场景需要匹配3个
+        break
+      case 'imageFilter':
+        keywords = groupKeywordDetector.getImageFilterKeywords()
+        break
+      case 'messageFilter':
+        keywords = groupKeywordDetector.getMessageFilterKeywords()
+        break
+    }
+
     const matchedWords = keywords.filter(keyword => text.includes(keyword))
-    const requiredMatchCount = groupKeywordDetector.getMatchCount()
 
     // 添加调试日志
-    console.log('匹配结果:', {
+    console.log(`${matchType}匹配结果:`, {
       keywords,
       matchedWords,
       matchCount: matchedWords.length,
@@ -66,8 +83,7 @@ function checkTextMatch(text: string): {
       matchCount: matchedWords.length
     }
   } catch (error) {
-    console.error('文本匹配检查失败:', error)
-    // 发生错误时返回安全的默认值
+    console.error(`${matchType}文本匹配检查失败:`, error)
     return {
       isMatch: false,
       matchedWords: [],
@@ -140,8 +156,8 @@ async function main() {
           const ocrResult = await ocrImage(imageUrl)
           console.log('群图片OCR结果:', ocrResult)
 
-          // 检查OCR结果中是否包含违规内容
-          const matchedKeywords = groupKeywordDetector.getMatchedKeywords(ocrResult)
+          // 使用图片关键词过滤
+          const matchedKeywords = groupKeywordDetector.getMatchedKeywords(ocrResult, 'image')
           if (matchedKeywords.length > 0) {
             console.log('群图片匹配到的关键词:', matchedKeywords)
 
@@ -198,10 +214,10 @@ async function main() {
           return
         }
 
-        // 检查文本是否违规
-        const matchedKeywords = groupKeywordDetector.getMatchedKeywords(messageText)
+        // 使用文本关键词过滤
+        const matchedKeywords = groupKeywordDetector.getMatchedKeywords(messageText, 'text')
         if (matchedKeywords.length > 0) {
-          console.log('匹配到的关键词:', matchedKeywords)
+          console.log('群文本匹配到的关键词:', matchedKeywords)
 
           try {
             await api.delete_msg({
@@ -307,7 +323,7 @@ async function main() {
       // 用户未领取且有可用卡密，进行图片识别
       const imageUrl = event.message[0].data.url
       const ocrResult = await ocrImage(imageUrl)
-      const matchResult = checkTextMatch(ocrResult)
+      const matchResult = checkTextMatch(ocrResult, 'reward')
       
       if (matchResult.isMatch) {
         const cdkey = cdkeyManager.getNewKey(event.user_id)

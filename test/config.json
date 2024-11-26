@@ -4,7 +4,7 @@
     "host": "124.223.40.234",
     "port": 8888,
     "accessToken": "你的访问令牌",
-    "selfId": 3869388623
+    "selfId": 2843098167
   },
   "ocr": {
     "ocrSpaceKeys": [
@@ -30,7 +30,17 @@
     "maxImageRecalls": 1,
     "timeWindow": 86400000
   },
-  "ad_keywords": [
+    
+  "Match_keywordsForReward": [    
+    "海盗船",
+    "暗黑",
+    "单刷",
+    "娱乐",
+    "经典",
+    "731502065"
+  ],
+
+  "keywordMsgFilter": [
     "新区",
     "新开",
     "公益服",
@@ -49,8 +59,7 @@
     "群号",
     "交流群"
   ],
-  "ad_words": [
-    "www",
+  "keywordImageFilter": [
     "新开",
     "开放",
     "今日",

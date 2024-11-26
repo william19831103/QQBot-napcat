@@ -6,6 +6,9 @@ interface Config {
   ad_keywords: string[]
   ad_words: string[]
   matchCount: number
+  keywordImageFilter: string[]
+  keywordMsgFilter: string[]
+  Match_keywordsForReward: string[]
 }
 
 // 检测结果接口
@@ -112,29 +115,73 @@ export class KeywordDetector {
     return result.length > 0
   }
 
-  public getMatchedKeywords(text: string): string[] {
-    // 1. 首先检查关键词
-    const keywordResult = this.detectKeywords(text)
-    if (keywordResult.detected) {
-      return keywordResult.value as string[]
-    }
+  public getMatchedKeywords(text: string, type: 'image' | 'text' = 'text'): string[] {
+    try {
+      // 根据消息类型选择对应的关键词列表
+      const keywords = type === 'image' 
+        ? (this.config?.keywordImageFilter || [])
+        : (this.config?.keywordMsgFilter || [])
 
-    // 2. 其次检查文本长度
-    const lengthResult = this.detectTextLength(text)
-    if (lengthResult.detected) {
-      return [`超长文本(${lengthResult.value}字)`]
-    }
+      // 检查文本中包含的关键词
+      const matchedWords = keywords.filter(keyword => text.includes(keyword))
+      
+      if (matchedWords.length > 0) {
+        console.log(`检测到${type === 'image' ? '图片' : '文本'}违规关键词:`, matchedWords)
+        return matchedWords
+      }
 
-    // 3. 最后检查连续数字
-    const numberResult = this.detectContinuousNumbers(text)
-    if (numberResult.detected) {
-      return (numberResult.value as string[]).map(num => `连续数字(${num})`)
-    }
+      // 检查文本长度
+      const lengthResult = this.detectTextLength(text)
+      if (lengthResult.detected) {
+        return [`超长文本(${lengthResult.value}字)`]
+      }
 
-    return []
+      // 检查连续数字
+      const numberResult = this.detectContinuousNumbers(text)
+      if (numberResult.detected) {
+        return (numberResult.value as string[]).map(num => `连续数字(${num})`)
+      }
+
+      return []
+    } catch (error) {
+      console.error('关键词检测失败:', error)
+      return []
+    }
   }
 
   public getCurrentKeywords(): string[] {
     return this.keywords
+  }
+
+  // 添加新方法获取奖励关键词
+  getRewardKeywords(): string[] {
+    if (!this.config) {
+      console.warn('配置为空，返回空数组')
+      return []
+    }
+    return this.config.Match_keywordsForReward || []
+  }
+
+  // 添加新方法获取奖励所需匹配数量
+  getRewardMatchCount(): number {
+    return 3; // 固定为3个关键词
+  }
+
+  // 获取图片过滤关键词
+  getImageFilterKeywords(): string[] {
+    if (!this.config) {
+      console.warn('配置为空，返回空数组')
+      return []
+    }
+    return this.config.keywordImageFilter || []
+  }
+
+  // 获取消息过滤关键词
+  getMessageFilterKeywords(): string[] {
+    if (!this.config) {
+      console.warn('配置为空，返回空数组')
+      return []
+    }
+    return this.config.keywordMsgFilter || []
   }
 } 
